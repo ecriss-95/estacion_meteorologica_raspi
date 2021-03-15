@@ -7,20 +7,7 @@ class ESP:
     """Save Station status and parse new status messages."""
 
     def __init__(self):
-        """
-        Initialize ESP variables.
 
-        Variables:
-            time_stmap: Fecha y Hora sin la Zona []
-            temperatura: Temperatura ambiente []
-            humedad: Humedad relativa del entorno []
-            lluvia: Lluvia con el Pluviometro []
-            uv: Indice de Luz UltraVioleta []
-            presion: Presion Atmosférica []
-            velociadad_viento: Velocidad del viento []
-            direccion_viento: Direccion del viento []
-            pluviometro []
-        """
         self.temperatura = 0.0
         self.humedad = 0.0
         self.lluvia = 0.0
@@ -29,7 +16,6 @@ class ESP:
         self.vlocidad_viento = 0.0
         self.direccion_viento = 0.0
         self.pluviometro = 0.0
-        self.is_first_measure = True
 
     def parse_measurements(self, list_of_msgs=[]):
         """
@@ -40,28 +26,24 @@ class ESP:
         Returns:
             result: True if parsing was successful, False if it wasn't
         """
-        # Skips first measurement bootloader ESP
-        if self.is_first_measure:
-            self.is_first_measure = False
-            return True
 
         if len(list_of_msgs) and len(list_of_msgs) == 8:
             try:
-                self.temperatura = float(list_of_msgs[1])
-                self.humedad = float(list_of_msgs[2])
-                self.lluvia = float(list_of_msgs[3])
-                self.uv = float(list_of_msgs[4])
-                self.presion = float(list_of_msgs[5])
-                self.vlocidad_viento = float(list_of_msgs[6])
-                self.direccion_viento = float(list_of_msgs[7])
-                self.pluviometro = float(list_of_msgs[8])
+                self.temperatura = float(list_of_msgs[0])
+                self.humedad = float(list_of_msgs[1])
+                self.lluvia = float(list_of_msgs[2])
+                self.uv = float(list_of_msgs[3])
+                self.presion = float(list_of_msgs[4])
+                self.vlocidad_viento = float(list_of_msgs[5])
+                self.direccion_viento = float(list_of_msgs[6])
+                self.pluviometro = float(list_of_msgs[7])
 
             except Exception as e:
                 print("[ARDUINO] Parsing error in Arduino message: " + str(e))
                 return False
             return True
         else:
-            print("[ARDUINO] Error while parsing message. Message is either empty or does not contain required fields")
+            #print("[ARDUINO] Error while parsing message. Message is either empty or does not contain required fields")
             return False
 
     def get_measurements(self, debug=False, raw_msg=""):
@@ -90,10 +72,11 @@ class ESP:
         dmsg = {}
         dmsg['temperatura'] = self.temperatura
         dmsg['humedad'] = self.humedad
+        dmsg['lluvia'] = self.lluvia
         dmsg['uv'] = self.uv
         dmsg['presion'] = self.presion
         dmsg['velocidad_viento'] = self.vlocidad_viento
-        dmsg['direccion'] = self.direccion_viento
+        dmsg['direccion_viento'] = self.direccion_viento
         dmsg['pluviometro'] = self.pluviometro
         return message, dmsg, raw_msg
 
@@ -106,20 +89,6 @@ class ArduinoSerial:
         """
         Initialize serial communication variables and sets station limits.
 
-        Parameters:
-            port: Microcontroller's serial port.
-            baud: Baud rate used in serial communication.
-            timeout: Read timeout in seconds.
-
-        Variables:
-            time_stmap: Fecha y Hora sin la Zona []
-            temperatura: Temperatura ambiente []
-            humedad: Humedad relativa del entorno []
-            lluvia: Lluvia con el Pluviometro []
-            uv: Indice de Luz UltraVioleta []
-            presion: Presion Atmosférica []
-            velociadad_viento: Velocidad del viento []
-            direccion_viento: Direccion del viento []
         """
         self.port = port
         self.baudrate = baudrate
@@ -151,9 +120,9 @@ class ArduinoSerial:
             return False
         self.ard_serial.setDTR(False)
         time.sleep(1)
-        self.ard_serial.flushInput()
         self.ard_serial.setDTR(True)
-        time.sleep(3)
+        time.sleep(2)
+        self.ard_serial.flushInput()
         return True
 
     def read_message(self, debug=False):
@@ -170,8 +139,8 @@ class ArduinoSerial:
         if self.ard_serial.inWaiting() > 0:
             # self.ard_serial.flushInput()
             raw_msg = self.ard_serial.readline()
-            message = raw_msg.rstrip('\n')
-            self.ESP8266.parse_measurements(message.split())
+            message = raw_msg.rstrip('\r\n')
+            self.ESP8266.parse_measurements(message.split(","))
             return self.ESP8266.get_measurements(debug, raw_msg)
         else:
             return [], {}, ""
