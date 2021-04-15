@@ -137,8 +137,8 @@ class ArduinoSerial:
             raw_msg: Mesage received from microcontroller
         """
         if self.ard_serial.inWaiting() > 0:
-            # self.ard_serial.flushInput()
             raw_msg = self.ard_serial.readline()
+            self.ard_serial.flushInput()
             message = raw_msg.rstrip('\r\n')
             self.ESP8266.parse_measurements(message.split(","))
             return self.ESP8266.get_measurements(debug, raw_msg)
